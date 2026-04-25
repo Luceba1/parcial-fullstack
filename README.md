@@ -61,6 +61,16 @@ parcial-fullstack/
 - Validaciones en backend y frontend
 - Sincronización automática del estado con TanStack Query
 
+### Crear la base de datos
+Antes de ejecutar el backend, es necesario crear la base de datos PostgreSQL con el nombre `parcial_catalogo`.
+
+Por ejemplo, desde psql:
+
+```sql
+CREATE DATABASE parcial_catalogo;
+```
+
+
 ## Backend
 
 ### Requisitos
@@ -114,7 +124,7 @@ Frontend disponible en:
 - http://localhost:5173
 
 ## Video de presentación
-Link al video: **PEGAR_AQUI_LINK_DEL_VIDEO**
+Link al video: **https://youtu.be/UBQqctKv3ps**
 
 ## Repositorio
 Link del repositorio: **PEGAR_AQUI_LINK_DEL_REPOSITORIO**
