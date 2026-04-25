@@ -127,7 +127,7 @@ Frontend disponible en:
 Link al video: **https://youtu.be/UBQqctKv3ps**
 
 ## Repositorio
-Link del repositorio: **PEGAR_AQUI_LINK_DEL_REPOSITORIO**
+Link del repositorio: **https://github.com/Luceba1/parcial-fullstack.git**
 
 ## Autoría
 Trabajo realizado por:
