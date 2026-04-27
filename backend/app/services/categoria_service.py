@@ -20,13 +20,13 @@ def _commit_or_raise(uow: SQLModelUnitOfWork, detail: str) -> None:
 
 
 def listar(uow: SQLModelUnitOfWork) -> list[Categoria]:
-    statement = select(Categoria).order_by(Categoria.nombre)
-    return list(uow.session.exec(statement).all())
+    statement = select(Categoria).where(Categoria.activo == True).order_by(Categoria.nombre)
+    return list(uow.exec(statement).all())
 
 
 def obtener_por_id(uow: SQLModelUnitOfWork, categoria_id: int) -> Categoria:
-    categoria = uow.session.get(Categoria, categoria_id)
-    if categoria is None:
+    categoria = uow.get(Categoria, categoria_id)
+    if categoria is None or not categoria.activo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Categoría no encontrada.",
@@ -36,9 +36,9 @@ def obtener_por_id(uow: SQLModelUnitOfWork, categoria_id: int) -> Categoria:
 
 def crear(uow: SQLModelUnitOfWork, payload: CategoriaCreate) -> Categoria:
     categoria = Categoria(**payload.model_dump())
-    uow.session.add(categoria)
+    uow.add(categoria)
     _commit_or_raise(uow, "No se pudo crear la categoría.")
-    uow.session.refresh(categoria)
+    uow.refresh(categoria)
     return categoria
 
 
@@ -53,16 +53,16 @@ def actualizar(
     for campo, valor in cambios.items():
         setattr(categoria, campo, valor)
 
-    uow.session.add(categoria)
+    uow.add(categoria)
     _commit_or_raise(uow, "No se pudo actualizar la categoría.")
-    uow.session.refresh(categoria)
+    uow.refresh(categoria)
     return categoria
 
 
 def eliminar(uow: SQLModelUnitOfWork, categoria_id: int) -> None:
     categoria = obtener_por_id(uow, categoria_id)
 
-    relacionada = uow.session.exec(
+    relacionada = uow.exec(
         select(ProductoCategoria).where(ProductoCategoria.categoria_id == categoria_id)
     ).first()
 
@@ -72,5 +72,6 @@ def eliminar(uow: SQLModelUnitOfWork, categoria_id: int) -> None:
             detail="No se puede eliminar la categoría porque está asociada a productos.",
         )
 
-    uow.session.delete(categoria)
+    categoria.activo = False
+    uow.add(categoria)
     _commit_or_raise(uow, "No se pudo eliminar la categoría.")

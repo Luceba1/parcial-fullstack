@@ -1,3 +1,4 @@
+from typing import Any
 from collections.abc import Generator
 
 from sqlmodel import Session
@@ -22,6 +23,18 @@ class SQLModelUnitOfWork:
 
     def rollback(self) -> None:
         self.session.rollback()
+
+    def add(self, instance: Any) -> None:
+        self.session.add(instance)
+
+    def refresh(self, instance: Any) -> None:
+        self.session.refresh(instance)
+
+    def get(self, entity: Any, ident: Any) -> Any:
+        return self.session.get(entity, ident)
+
+    def exec(self, statement: Any) -> Any:
+        return self.session.exec(statement)
 
 
 def get_uow() -> Generator[SQLModelUnitOfWork, None, None]:

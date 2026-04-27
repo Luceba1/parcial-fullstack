@@ -1,5 +1,9 @@
+from datetime import datetime, timezone
+from decimal import Decimal
 from typing import TYPE_CHECKING, Optional, List
 
+from sqlalchemy import Column, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.models.producto_categoria import ProductoCategoria
@@ -14,9 +18,16 @@ class Producto(SQLModel, table=True):
     __tablename__ = "producto"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    nombre: str = Field(index=True, min_length=2, max_length=120)
+    nombre: str = Field(index=True, min_length=2, max_length=150)
     descripcion: Optional[str] = Field(default=None, max_length=255)
-    precio: float = Field(gt=0)
+    precio_base: Decimal = Field(default=0, max_digits=10, decimal_places=2, ge=0)
+    imagenes_url: list[str] = Field(default_factory=list, sa_column=Column(ARRAY(String)))
+    stock_cantidad: int = Field(default=0, ge=0)
+    disponible: bool = Field(default=True)
+    activo: bool = Field(default=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    deleted_at: Optional[datetime] = Field(default=None)
 
     categorias: List["Categoria"] = Relationship(
         back_populates="productos",

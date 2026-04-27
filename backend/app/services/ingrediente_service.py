@@ -20,13 +20,13 @@ def _commit_or_raise(uow: SQLModelUnitOfWork, detail: str) -> None:
 
 
 def listar(uow: SQLModelUnitOfWork) -> list[Ingrediente]:
-    statement = select(Ingrediente).order_by(Ingrediente.nombre)
-    return list(uow.session.exec(statement).all())
+    statement = select(Ingrediente).where(Ingrediente.activo == True).order_by(Ingrediente.nombre)
+    return list(uow.exec(statement).all())
 
 
 def obtener_por_id(uow: SQLModelUnitOfWork, ingrediente_id: int) -> Ingrediente:
-    ingrediente = uow.session.get(Ingrediente, ingrediente_id)
-    if ingrediente is None:
+    ingrediente = uow.get(Ingrediente, ingrediente_id)
+    if ingrediente is None or not ingrediente.activo:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Ingrediente no encontrado.",
@@ -36,9 +36,9 @@ def obtener_por_id(uow: SQLModelUnitOfWork, ingrediente_id: int) -> Ingrediente:
 
 def crear(uow: SQLModelUnitOfWork, payload: IngredienteCreate) -> Ingrediente:
     ingrediente = Ingrediente(**payload.model_dump())
-    uow.session.add(ingrediente)
+    uow.add(ingrediente)
     _commit_or_raise(uow, "No se pudo crear el ingrediente.")
-    uow.session.refresh(ingrediente)
+    uow.refresh(ingrediente)
     return ingrediente
 
 
@@ -53,16 +53,16 @@ def actualizar(
     for campo, valor in cambios.items():
         setattr(ingrediente, campo, valor)
 
-    uow.session.add(ingrediente)
+    uow.add(ingrediente)
     _commit_or_raise(uow, "No se pudo actualizar el ingrediente.")
-    uow.session.refresh(ingrediente)
+    uow.refresh(ingrediente)
     return ingrediente
 
 
 def eliminar(uow: SQLModelUnitOfWork, ingrediente_id: int) -> None:
     ingrediente = obtener_por_id(uow, ingrediente_id)
 
-    relacionada = uow.session.exec(
+    relacionada = uow.exec(
         select(ProductoIngrediente).where(ProductoIngrediente.ingrediente_id == ingrediente_id)
     ).first()
 
@@ -72,5 +72,6 @@ def eliminar(uow: SQLModelUnitOfWork, ingrediente_id: int) -> None:
             detail="No se puede eliminar el ingrediente porque está asociado a productos.",
         )
 
-    uow.session.delete(ingrediente)
+    ingrediente.activo = False
+    uow.add(ingrediente)
     _commit_or_raise(uow, "No se pudo eliminar el ingrediente.")

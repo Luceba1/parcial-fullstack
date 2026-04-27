@@ -18,3 +18,4 @@ class ProductoIngrediente(SQLModel, table=True):
         foreign_key="ingrediente.id",
         primary_key=True,
     )
+    es_removible: bool = Field(default=False)

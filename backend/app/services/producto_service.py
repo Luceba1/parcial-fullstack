@@ -39,9 +39,9 @@ def _cargar_relaciones(uow: SQLModelUnitOfWork, producto_id: int) -> Producto:
             selectinload(Producto.categorias),
             selectinload(Producto.ingredientes),
         )
-        .where(Producto.id == producto_id)
+        .where(Producto.id == producto_id, Producto.activo == True)
     )
-    producto = uow.session.exec(statement).first()
+    producto = uow.exec(statement).first()
     if producto is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -56,7 +56,7 @@ def _obtener_categorias(uow: SQLModelUnitOfWork, categoria_ids: list[int]) -> li
 
     _validar_ids_unicos(categoria_ids, "categoria_ids")
     statement = select(Categoria).where(Categoria.id.in_(categoria_ids))
-    categorias = list(uow.session.exec(statement).all())
+    categorias = list(uow.exec(statement).all())
 
     if len(categorias) != len(categoria_ids):
         raise HTTPException(
@@ -72,7 +72,7 @@ def _obtener_ingredientes(uow: SQLModelUnitOfWork, ingrediente_ids: list[int]) -
 
     _validar_ids_unicos(ingrediente_ids, "ingrediente_ids")
     statement = select(Ingrediente).where(Ingrediente.id.in_(ingrediente_ids))
-    ingredientes = list(uow.session.exec(statement).all())
+    ingredientes = list(uow.exec(statement).all())
 
     if len(ingredientes) != len(ingrediente_ids):
         raise HTTPException(
@@ -88,7 +88,7 @@ def listar(
     page: int = 1,
     size: int = 10,
 ) -> list[Producto]:
-    statement = select(Producto).options(
+    statement = select(Producto).where(Producto.activo == True).options(
         selectinload(Producto.categorias),
         selectinload(Producto.ingredientes),
     )
@@ -103,7 +103,7 @@ def listar(
         )
 
     statement = statement.order_by(Producto.id.desc()).offset((page - 1) * size).limit(size)
-    return list(uow.session.exec(statement).all())
+    return list(uow.exec(statement).all())
 
 
 def obtener_por_id(uow: SQLModelUnitOfWork, producto_id: int) -> Producto:
@@ -117,14 +117,17 @@ def crear(uow: SQLModelUnitOfWork, payload: ProductoCreate) -> Producto:
     producto = Producto(
         nombre=payload.nombre,
         descripcion=payload.descripcion,
-        precio=payload.precio,
+        precio_base=payload.precio_base,
+        imagenes_url=payload.imagenes_url,
+        stock_cantidad=payload.stock_cantidad,
+        disponible=payload.disponible,
     )
     producto.categorias = categorias
     producto.ingredientes = ingredientes
 
-    uow.session.add(producto)
+    uow.add(producto)
     _commit_or_raise(uow, "No se pudo crear el producto.")
-    uow.session.refresh(producto)
+    uow.refresh(producto)
 
     return _cargar_relaciones(uow, producto.id)
 
@@ -141,16 +144,22 @@ def actualizar(
         producto.nombre = cambios["nombre"]
     if "descripcion" in cambios:
         producto.descripcion = cambios["descripcion"]
-    if "precio" in cambios:
-        producto.precio = cambios["precio"]
+    if "precio_base" in cambios:
+        producto.precio_base = cambios["precio_base"]
+    if "imagenes_url" in cambios:
+        producto.imagenes_url = cambios["imagenes_url"]
+    if "stock_cantidad" in cambios:
+        producto.stock_cantidad = cambios["stock_cantidad"]
+    if "disponible" in cambios:
+        producto.disponible = cambios["disponible"]
     if "categoria_ids" in cambios and cambios["categoria_ids"] is not None:
         producto.categorias = _obtener_categorias(uow, cambios["categoria_ids"])
     if "ingrediente_ids" in cambios and cambios["ingrediente_ids"] is not None:
         producto.ingredientes = _obtener_ingredientes(uow, cambios["ingrediente_ids"])
 
-    uow.session.add(producto)
+    uow.add(producto)
     _commit_or_raise(uow, "No se pudo actualizar el producto.")
-    uow.session.refresh(producto)
+    uow.refresh(producto)
 
     return _cargar_relaciones(uow, producto.id)
 
@@ -158,10 +167,6 @@ def actualizar(
 def eliminar(uow: SQLModelUnitOfWork, producto_id: int) -> None:
     producto = _cargar_relaciones(uow, producto_id)
 
-    producto.categorias.clear()
-    producto.ingredientes.clear()
-    uow.session.add(producto)
-    uow.session.flush()
-
-    uow.session.delete(producto)
+    producto.activo = False
+    uow.add(producto)
     _commit_or_raise(uow, "No se pudo eliminar el producto.")
